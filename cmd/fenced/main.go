@@ -6,9 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/Use-Tusk/fence/pkg/fence"
+	shellquote "github.com/kballard/go-shellquote"
 )
 
 func main() {
@@ -49,7 +49,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	wrapped, err := manager.WrapCommand(shellJoin(cmdArgs))
+	wrapped, err := manager.WrapCommand(shellquote.Join(cmdArgs...))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -106,16 +106,4 @@ func mustAbs(paths []string) []string {
 		}
 	}
 	return out
-}
-
-func shellJoin(args []string) string {
-	// 簡易版。本格的にやるなら google/shlex 等
-	var s strings.Builder
-	for i, a := range args {
-		if i > 0 {
-			s.WriteString(" ")
-		}
-		fmt.Fprintf(&s, "%q", a)
-	}
-	return s.String()
 }
