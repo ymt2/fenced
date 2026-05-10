@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 
 	"github.com/Use-Tusk/fence/pkg/fence"
 	shellquote "github.com/kballard/go-shellquote"
@@ -22,11 +23,31 @@ func main() {
 		os.Exit(2)
 	}
 
-	abs, err := filepath.Abs("/tmp/fence.log")
+	logPath, err := filepath.Abs("/tmp/fence.log")
 	if err != nil {
 		log.Fatal(err)
 	}
-	os.Setenv("FENCE_LOG_FILE", abs)
+	os.Setenv("FENCE_LOG_FILE", logPath)
+
+	// fence ライブラリ内の fencelog は init 時に os.Stderr (fd 2) を捕捉して
+	// そこへ書き込むため、env var だけでは抑止できない。fd 2 をログファイルに
+	// 差し替え、元の stderr は子プロセス用に取っておく。
+	origStderrFd, err := syscall.Dup(int(os.Stderr.Fd()))
+	if err != nil {
+		log.Fatal(err)
+	}
+	origStderr := os.NewFile(uintptr(origStderrFd), "/dev/stderr")
+
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer logFile.Close()
+	if err := syscall.Dup2(int(logFile.Fd()), int(os.Stderr.Fd())); err != nil {
+		log.Fatal(err)
+	}
+	// fenced 自身のエラーはユーザに見せたいのでログ出力を元の stderr に戻す。
+	log.SetOutput(origStderr)
 
 	// 既存の ~/.config/fence/fence.json を読む
 	cfg, err := fence.LoadConfigResolved(fence.ResolveDefaultConfigPath())
@@ -55,7 +76,7 @@ func main() {
 	}
 
 	cmd := exec.Command("sh", "-c", wrapped)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, origStderr
 	if err := cmd.Run(); err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
 			os.Exit(ee.ExitCode())
