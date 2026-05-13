@@ -2,5 +2,5 @@ pre-commit:
   jobs:
     - name: go fix
       glob: "*.go"
-      run: go fix ./...
+      run: make fix
       stage_fixed: true

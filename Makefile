@@ -1,4 +1,4 @@
-.PHONY: install build compile clean test ci check fmt fix vet
+.PHONY: install build compile clean test ci check fmt fix fix-check vet
 
 BINARY      := fenced
 INSTALL_DIR := $(HOME)/.local/bin
@@ -26,6 +26,8 @@ fmt:
 
 fix:
 	go fix ./...
+
+fix-check: fix
 	@if ! git diff --exit-code; then \
 		echo "go fix produced changes; commit them."; \
 		exit 1; \
@@ -37,6 +39,6 @@ vet:
 test:
 	go test -race ./...
 
-check: fmt fix vet test
+check: fmt fix-check vet test
 
 ci: compile check

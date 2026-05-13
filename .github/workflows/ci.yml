@@ -14,21 +14,4 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - run: go build ./...
-      - name: gofumpt
-        run: |
-          out=$(go tool gofumpt -l .)
-          if [ -n "$out" ]; then
-            echo "gofumpt needs to be run on:"
-            echo "$out"
-            exit 1
-          fi
-      - name: go fix
-        run: |
-          go fix ./...
-          if ! git diff --exit-code; then
-            echo "go fix produced changes; commit them."
-            exit 1
-          fi
-      - run: go vet ./...
-      - run: go test -race ./...
+      - run: make ci
