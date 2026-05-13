@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -17,13 +18,19 @@ func main() {
 		log.Fatal("sandboxing not supported on this platform")
 	}
 
-	cmdArgs := afterDoubleDash(os.Args[1:])
+	preArgs, cmdArgs := splitDoubleDash(os.Args[1:])
+
+	fs := flag.NewFlagSet("fenced", flag.ExitOnError)
+	logFileFlag := fs.String("fence-log-file", "/tmp/fence.log", "path to fence log file")
+	if err := fs.Parse(preArgs); err != nil {
+		log.Fatal(err)
+	}
 	if len(cmdArgs) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: fenced [...] -- <command> [args...]")
+		fmt.Fprintln(os.Stderr, "usage: fenced [--fence-log-file path] -- <command> [args...]")
 		os.Exit(2)
 	}
 
-	logPath, err := filepath.Abs("/tmp/fence.log")
+	logPath, err := filepath.Abs(*logFileFlag)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -85,14 +92,14 @@ func main() {
 	}
 }
 
-// "--" 以降だけ取り出す。"--" が無ければ全引数を返す。
-func afterDoubleDash(args []string) []string {
+// "--" の前後で引数を分割する。"--" が無ければ全引数を cmdArgs として返す。
+func splitDoubleDash(args []string) (pre, cmd []string) {
 	for i, a := range args {
 		if a == "--" {
-			return args[i+1:]
+			return args[:i], args[i+1:]
 		}
 	}
-	return args
+	return nil, args
 }
 
 func dynamicSockets() []string {
@@ -105,6 +112,11 @@ func dynamicSockets() []string {
 
 	// launchd の socket を全部 (re-boot 後の path 変動対策)
 	if matches, _ := filepath.Glob("/private/var/run/com.apple.launchd.*/Listeners"); matches != nil {
+		out = append(out, matches...)
+	}
+
+	// GnuPG agent / scdaemon / dirmngr 等の socket
+	if matches, _ := filepath.Glob(os.ExpandEnv("$HOME/.gnupg/S.*")); matches != nil {
 		out = append(out, matches...)
 	}
 
