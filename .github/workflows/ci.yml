@@ -15,11 +15,11 @@ jobs:
           go-version-file: go.mod
           cache: true
       - run: go build ./...
-      - name: gofmt
+      - name: gofumpt
         run: |
-          out=$(gofmt -l .)
+          out=$(go tool gofumpt -l .)
           if [ -n "$out" ]; then
-            echo "gofmt needs to be run on:"
+            echo "gofumpt needs to be run on:"
             echo "$out"
             exit 1
           fi
