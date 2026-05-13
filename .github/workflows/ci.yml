@@ -15,5 +15,20 @@ jobs:
           go-version-file: go.mod
           cache: true
       - run: go build ./...
+      - name: gofmt
+        run: |
+          out=$(gofmt -l .)
+          if [ -n "$out" ]; then
+            echo "gofmt needs to be run on:"
+            echo "$out"
+            exit 1
+          fi
+      - name: go fix
+        run: |
+          go fix ./...
+          if ! git diff --exit-code; then
+            echo "go fix produced changes; commit them."
+            exit 1
+          fi
       - run: go vet ./...
       - run: go test -race ./...
