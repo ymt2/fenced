@@ -214,7 +214,7 @@ func TestSandboxStatsPrintSummary(t *testing.T) {
 
 func TestSandboxStatsPrintSummaryTruncatesHighCardinality(t *testing.T) {
 	byDetail := map[string]int{}
-	for i := 0; i < detailsPerOperation+5; i++ {
+	for i := range detailsPerOperation + 5 {
 		byDetail[fmt.Sprintf("/path/variant-%02d", i)] = 1
 	}
 	s := &sandboxStats{counts: map[string]map[string]int{
