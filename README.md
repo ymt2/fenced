@@ -95,6 +95,72 @@ Notes:
 - Stats rely on the macOS unified log (`log stream`). On other platforms the
   summary is skipped.
 
+## Recipe: agent-browser
+
+[agent-browser](https://www.npmjs.com/package/agent-browser) drives Chrome over
+CDP through a background daemon. Two things trip it up under the sandbox:
+
+- **Chrome can't launch inside.** It needs mach service registration (Crashpad),
+  writes under `~/Library/Application Support/Google/Chrome`, and to bind its own
+  `SingletonSocket` — none of which the sandbox grants. Chrome must run
+  **outside** `fenced`.
+- **The daemon can't bind its control socket by default.** Binding an AF_UNIX
+  socket requires its path to be in fence's `allowUnixSockets`; the daemon's
+  `~/.agent-browser/*.sock` isn't there out of the box, so the bind is denied.
+  (`allowLocalBinding` only covers TCP loopback ports, not Unix sockets.)
+
+The working split: run Chrome **outside** the sandbox with a debugging port, run
+agent-browser (daemon + CLI) **inside**, and let the daemon attach to Chrome over
+loopback CDP (loopback outbound is allowed).
+
+**1. Allow the daemon's socket in `~/.config/fence/fence.json`:**
+
+```jsonc
+{
+  "network": {
+    "allowUnixSockets": [
+      "~/.agent-browser"        // NOT "~/.agent-browser/**" — see note
+    ]
+  },
+  "filesystem": {
+    "allowWrite": [
+      "~/.agent-browser/**"     // daemon state + the socket file
+    ]
+  }
+}
+```
+
+> **Glob gotcha:** an `allowUnixSockets` entry becomes a literal Seatbelt
+> `(subpath ...)` — globs are **not** expanded — so pass the bare directory
+> (`~/.agent-browser`), which matches every socket beneath it. `filesystem`
+> rules *are* glob-aware, so `~/.agent-browser/**` is correct there.
+
+**2. Start Chrome outside the sandbox** with remote debugging:
+
+```sh
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --remote-debugging-port=9222 \
+  --user-data-dir="$HOME/.cache/agent-browser-chrome" \
+  --no-first-run --no-default-browser-check &
+```
+
+**3. Run agent-browser inside `fenced`, attaching to that Chrome:**
+
+```sh
+export AGENT_BROWSER_CDP=9222     # attach to the running Chrome instead of launching one
+fenced -- agent-browser open https://example.com
+fenced -- agent-browser snapshot -i
+```
+
+Pass `--cdp 9222` per command instead of the env var if you prefer. Avoid the
+`connect` subcommand here — it starts a daemon that tries to launch its own
+Chrome, which the sandbox blocks.
+
+> **Security note:** because Chrome runs outside the sandbox, page traffic is
+> **not** subject to fence's `allowedDomains`. The sandbox still confines the
+> agent-browser process inside it (it only reaches Chrome over loopback), but
+> browsing itself escapes the network policy.
+
 ## Development
 
 ```sh
