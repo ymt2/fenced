@@ -55,7 +55,7 @@ func main() {
 		cfg = fence.DefaultConfig()
 	}
 
-	// 動的に socket を解決して上乗せ
+	// Resolve sockets dynamically and append them.
 	cfg.Network.AllowUnixSockets = append(
 		cfg.Network.AllowUnixSockets,
 		dynamicSockets()...,
@@ -95,7 +95,7 @@ func main() {
 	}
 }
 
-// "--" の前後で引数を分割する。"--" が無ければ全引数を cmdArgs として返す。
+// splitDoubleDash splits args around "--". When "--" is absent, all args are returned as cmd.
 func splitDoubleDash(args []string) (pre, cmd []string) {
 	for i, a := range args {
 		if a == "--" {
@@ -108,22 +108,22 @@ func splitDoubleDash(args []string) (pre, cmd []string) {
 func dynamicSockets() []string {
 	var out []string
 
-	// SSH agent (env から)
+	// SSH agent (from env)
 	if s := os.Getenv("SSH_AUTH_SOCK"); s != "" {
 		out = append(out, s)
 	}
 
-	// launchd の socket を全部 (re-boot 後の path 変動対策)
+	// All launchd sockets (guards against path changes after a reboot)
 	if matches, _ := filepath.Glob("/private/var/run/com.apple.launchd.*/Listeners"); matches != nil {
 		out = append(out, matches...)
 	}
 
-	// GnuPG agent / scdaemon / dirmngr 等の socket
+	// GnuPG agent / scdaemon / dirmngr sockets
 	if matches, _ := filepath.Glob(os.ExpandEnv("$HOME/.gnupg/S.*")); matches != nil {
 		out = append(out, matches...)
 	}
 
-	// Git fsmonitor (cwd の repo + worktree)
+	// Git fsmonitor (the cwd repo + its worktrees)
 	if matches, _ := filepath.Glob(".git/fsmonitor--daemon.ipc"); matches != nil {
 		out = append(out, mustAbs(matches)...)
 	}
@@ -155,7 +155,7 @@ func redirectStderrToPipe(verbose bool) (origStderr *os.File, drainDone <-chan s
 		return nil, nil, err
 	}
 	origStderr = os.NewFile(uintptr(origFd), "/dev/stderr")
-	// fenced 自身のログはユーザに見せたいので元の stderr に戻す。
+	// fenced's own log should reach the user, so point it back at the original stderr.
 	log.SetOutput(origStderr)
 
 	pipeR, pipeW, err := os.Pipe()
@@ -169,7 +169,7 @@ func redirectStderrToPipe(verbose bool) (origStderr *os.File, drainDone <-chan s
 		_ = origStderr.Close()
 		return nil, nil, err
 	}
-	// fd 2 が pipe の write 側を保持するので、こちらの参照は閉じてよい。
+	// fd 2 now holds the pipe's write end, so this reference can be closed.
 	_ = pipeW.Close()
 
 	var sink io.Writer = io.Discard
@@ -257,7 +257,7 @@ func startSandboxStats(wrappedCommand string, origStderr io.Writer) *sandboxStat
 		}
 	}()
 
-	// log stream の attach 完了前に発生した event を取り損ねないよう待つ。
+	// Wait so events that fire before the log stream finishes attaching are not missed.
 	time.Sleep(100 * time.Millisecond)
 	return s
 }
@@ -266,7 +266,7 @@ func (s *sandboxStats) stop() {
 	if s == nil || s.cancel == nil {
 		return
 	}
-	// 子プロセス終了直後の event が log stream に届くまで少し待つ。
+	// Give the log stream a moment to deliver events from right after the child exits.
 	time.Sleep(500 * time.Millisecond)
 	s.cancel()
 	if s.cmd != nil && s.cmd.Process != nil {
