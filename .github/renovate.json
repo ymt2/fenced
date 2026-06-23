@@ -1,0 +1,19 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "schedule:weekly"
+  ],
+  "semanticCommits": "disabled",
+  "packageRules": [
+    {
+      "matchManagers": ["gomod"],
+      "groupName": "go dependencies",
+      "commitMessagePrefix": "deps:"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "commitMessagePrefix": "ci:"
+    }
+  ]
+}
