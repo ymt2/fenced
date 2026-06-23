@@ -18,7 +18,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Use-Tusk/fence/pkg/fence"
+	"github.com/fencesandbox/fence/pkg/fence"
 	shellquote "github.com/kballard/go-shellquote"
 )
 
@@ -186,7 +186,7 @@ func redirectStderrToPipe(verbose bool) (origStderr *os.File, drainDone <-chan s
 }
 
 // sessionSuffixPattern matches the per-invocation tag fence embeds in
-// macOS sandbox profiles (see Use-Tusk/fence internal/sandbox/macos.go).
+// macOS sandbox profiles (see fencesandbox/fence internal/sandbox/macos.go).
 var sessionSuffixPattern = regexp.MustCompile(`_[0-9a-f]{9}_SBX`)
 
 // sandboxStats accumulates blocked-operation counts via the macOS unified
@@ -377,7 +377,7 @@ func truncateForSummary(s string, max int) string {
 }
 
 // violationPattern matches sandbox denial lines emitted by macOS
-// `log stream --style compact`. Mirrors Use-Tusk/fence
+// `log stream --style compact`. Mirrors fencesandbox/fence
 // internal/sandbox/monitor.go violationPattern, but we capture the
 // operation and the trailing details separately so we can filter noise
 // from foundational paths like /dev/tty.

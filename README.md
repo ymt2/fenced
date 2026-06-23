@@ -1,6 +1,6 @@
 # fenced
 
-`fenced` is a thin wrapper around [Use-Tusk/fence](https://github.com/Use-Tusk/fence)
+`fenced` is a thin wrapper around [fencesandbox/fence](https://github.com/fencesandbox/fence)
 that sandboxes a command using your existing fence configuration, transparently
 allows the local sockets a typical dev shell needs, and prints a summary of what
 the sandbox blocked when the command exits.
