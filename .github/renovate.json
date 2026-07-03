@@ -8,11 +8,6 @@
   "semanticCommits": "disabled",
   "packageRules": [
     {
-      "matchUpdateTypes": ["minor", "patch"],
-      "automerge": true,
-      "automergeType": "pr"
-    },
-    {
       "matchManagers": ["gomod"],
       "groupName": "go dependencies",
       "commitMessagePrefix": "deps:"
@@ -20,6 +15,11 @@
     {
       "matchManagers": ["github-actions"],
       "commitMessagePrefix": "ci:"
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr"
     }
   ]
 }
