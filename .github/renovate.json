@@ -5,6 +5,8 @@
     "helpers:pinGitHubActionDigests",
     "schedule:weekly"
   ],
+  "automerge": true,
+  "automergeType": "pr",
   "semanticCommits": "disabled",
   "packageRules": [
     {
