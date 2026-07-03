@@ -5,10 +5,13 @@
     "helpers:pinGitHubActionDigests",
     "schedule:weekly"
   ],
-  "automerge": true,
-  "automergeType": "pr",
   "semanticCommits": "disabled",
   "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr"
+    },
     {
       "matchManagers": ["gomod"],
       "groupName": "go dependencies",
