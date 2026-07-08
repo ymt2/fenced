@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -96,6 +97,100 @@ func TestDynamicSocketsIncludesGnuPG(t *testing.T) {
 	}
 	if slices.Contains(got, decoy) {
 		t.Errorf("dynamicSockets() unexpectedly contains decoy %q", decoy)
+	}
+}
+
+func requireGit(t *testing.T) {
+	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not found in PATH")
+	}
+}
+
+func runGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	cmd.Env = append(
+		os.Environ(),
+		"GIT_CONFIG_NOSYSTEM=1",
+		"GIT_CONFIG_GLOBAL=/dev/null",
+		"GIT_AUTHOR_NAME=fenced-test",
+		"GIT_AUTHOR_EMAIL=fenced-test@example.invalid",
+		"GIT_COMMITTER_NAME=fenced-test",
+		"GIT_COMMITTER_EMAIL=fenced-test@example.invalid",
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, out)
+	}
+}
+
+// initGitRepo creates a git repository under dir and returns the
+// symlink-resolved path of its .git directory (t.TempDir lives under a
+// symlinked path on macOS).
+func initGitRepo(t *testing.T, dir string) string {
+	t.Helper()
+	runGit(t, dir, "init", "-q")
+	gitDir, err := filepath.EvalSymlinks(filepath.Join(dir, ".git"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return gitDir
+}
+
+func TestGitCommonDir(t *testing.T) {
+	requireGit(t)
+	tmp := t.TempDir()
+
+	repo := filepath.Join(tmp, "repo")
+	if err := os.Mkdir(repo, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	gitDir := initGitRepo(t, repo)
+
+	t.Run("main worktree", func(t *testing.T) {
+		t.Chdir(repo)
+		if got := gitCommonDir(); got != gitDir {
+			t.Errorf("gitCommonDir() = %q, want %q", got, gitDir)
+		}
+	})
+
+	t.Run("linked worktree resolves the common dir", func(t *testing.T) {
+		runGit(t, repo, "commit", "-q", "--allow-empty", "-m", "init")
+		wt := filepath.Join(tmp, "wt")
+		runGit(t, repo, "worktree", "add", "-q", wt)
+		t.Chdir(wt)
+		if got := gitCommonDir(); got != gitDir {
+			t.Errorf("gitCommonDir() = %q, want %q", got, gitDir)
+		}
+	})
+
+	t.Run("outside a repository", func(t *testing.T) {
+		outside := filepath.Join(tmp, "outside")
+		if err := os.Mkdir(outside, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		t.Chdir(outside)
+		if got := gitCommonDir(); got != "" {
+			t.Errorf("gitCommonDir() = %q, want empty outside a repository", got)
+		}
+	})
+}
+
+func TestDynamicSocketsIncludesFsmonitorPaths(t *testing.T) {
+	requireGit(t)
+	repo := t.TempDir()
+	gitDir := initGitRepo(t, repo)
+	t.Chdir(repo)
+
+	got := dynamicSockets()
+	for _, want := range []string{
+		filepath.Join(gitDir, "fsmonitor--daemon.ipc"),
+		filepath.Join(gitDir, "worktrees"),
+	} {
+		if !slices.Contains(got, want) {
+			t.Errorf("dynamicSockets() missing %q; got %#v", want, got)
+		}
 	}
 }
 

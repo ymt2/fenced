@@ -123,25 +123,42 @@ func dynamicSockets() []string {
 		out = append(out, matches...)
 	}
 
-	// Git fsmonitor (the cwd repo + its worktrees)
-	if matches, _ := filepath.Glob(".git/fsmonitor--daemon.ipc"); matches != nil {
-		out = append(out, mustAbs(matches)...)
-	}
-	if matches, _ := filepath.Glob(".git/worktrees/*/fsmonitor--daemon.ipc"); matches != nil {
-		out = append(out, mustAbs(matches)...)
+	// Git fsmonitor. Resolve the common .git dir through git so this works
+	// when launched from a linked worktree (where .git is a file, not a
+	// directory), and allow the worktrees dir as a whole so sockets for
+	// worktrees created while the sandbox is running are covered too.
+	if gitDir := gitCommonDir(); gitDir != "" {
+		out = append(
+			out,
+			filepath.Join(gitDir, "fsmonitor--daemon.ipc"),
+			filepath.Join(gitDir, "worktrees"),
+		)
 	}
 
 	return out
 }
 
-func mustAbs(paths []string) []string {
-	out := make([]string, 0, len(paths))
-	for _, p := range paths {
-		if abs, err := filepath.Abs(p); err == nil {
-			out = append(out, abs)
-		}
+// gitCommonDir returns the absolute, symlink-resolved path of the
+// repository's common .git directory, or "" when the cwd is not inside a
+// git repository (or git is unavailable). Symlinks are resolved because
+// fence's allowUnixSockets rules match the enforced (physical) path.
+func gitCommonDir() string {
+	raw, err := exec.Command("git", "rev-parse", "--git-common-dir").Output()
+	if err != nil {
+		return ""
 	}
-	return out
+	dir := strings.TrimSpace(string(raw))
+	if dir == "" {
+		return ""
+	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return ""
+	}
+	if resolved, err := filepath.EvalSymlinks(abs); err == nil {
+		abs = resolved
+	}
+	return abs
 }
 
 // redirectStderrToPipe captures fd 2 so the fence library's init-time
