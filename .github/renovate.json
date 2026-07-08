@@ -15,6 +15,11 @@
     {
       "matchManagers": ["github-actions"],
       "commitMessagePrefix": "ci:"
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr"
     }
   ]
 }
