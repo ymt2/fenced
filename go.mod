@@ -3,7 +3,7 @@ module github.com/ymt2/fenced
 go 1.26.2
 
 require (
-	github.com/fencesandbox/fence v0.1.61
+	github.com/fencesandbox/fence v0.1.62
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 )
 
