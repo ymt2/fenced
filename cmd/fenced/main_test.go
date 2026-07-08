@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/fencesandbox/fence/pkg/fence"
 )
 
 func TestSplitDoubleDash(t *testing.T) {
@@ -238,5 +240,128 @@ func TestSandboxStatsPrintSummaryEmpty(t *testing.T) {
 	s.printSummary(&buf)
 	if !strings.Contains(buf.String(), "no sandbox violations recorded") {
 		t.Errorf("expected empty-state message, got %q", buf.String())
+	}
+}
+
+func TestParseCheckArgs(t *testing.T) {
+	tests := []struct {
+		name      string
+		args      []string
+		wantKind  string
+		wantValue string
+		wantErr   bool
+	}{
+		{
+			name:      "read path",
+			args:      []string{"read", "/etc/hosts"},
+			wantKind:  "read",
+			wantValue: "/etc/hosts",
+		},
+		{
+			name:      "write path",
+			args:      []string{"write", "/tmp/x"},
+			wantKind:  "write",
+			wantValue: "/tmp/x",
+		},
+		{
+			name:      "url",
+			args:      []string{"url", "https://example.com/path"},
+			wantKind:  "url",
+			wantValue: "https://example.com/path",
+		},
+		{
+			name:      "command joins bare args",
+			args:      []string{"command", "git", "push", "origin", "main"},
+			wantKind:  "command",
+			wantValue: "git push origin main",
+		},
+		{
+			name:      "command re-quotes args containing spaces",
+			args:      []string{"command", "sh", "-c", "echo hi"},
+			wantKind:  "command",
+			wantValue: "sh -c 'echo hi'",
+		},
+		{
+			name:    "no args",
+			args:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "kind without value",
+			args:    []string{"read"},
+			wantErr: true,
+		},
+		{
+			name:    "read with extra value",
+			args:    []string{"read", "/a", "/b"},
+			wantErr: true,
+		},
+		{
+			name:    "unknown kind",
+			args:    []string{"exec", "/bin/ls"},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			kind, value, err := parseCheckArgs(tt.args)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("parseCheckArgs(%#v) error = %v, wantErr %v", tt.args, err, tt.wantErr)
+			}
+			if err != nil {
+				return
+			}
+			if kind != tt.wantKind || value != tt.wantValue {
+				t.Errorf("parseCheckArgs(%#v) = (%q, %q), want (%q, %q)",
+					tt.args, kind, value, tt.wantKind, tt.wantValue)
+			}
+		})
+	}
+}
+
+func TestCheckPolicy(t *testing.T) {
+	cfg := &fence.Config{
+		Network: fence.NetworkConfig{
+			AllowedDomains: []string{"example.com"},
+			DeniedDomains:  []string{"evil.example.com"},
+		},
+		Filesystem: fence.FilesystemConfig{
+			AllowWrite: []string{"/tmp/allowed/**"},
+			DenyRead:   []string{"/tmp/secret/**"},
+		},
+		Command: fence.CommandConfig{
+			Deny: []string{"git push"},
+		},
+	}
+	tests := []struct {
+		name    string
+		kind    string
+		value   string
+		cwd     string
+		wantErr bool
+	}{
+		{name: "read allowed by default", kind: "read", value: "/tmp/anything"},
+		{name: "read denied by denyRead", kind: "read", value: "/tmp/secret/key", wantErr: true},
+		{name: "write allowed by allowWrite", kind: "write", value: "/tmp/allowed/file"},
+		{name: "write denied by default", kind: "write", value: "/tmp/elsewhere/file", wantErr: true},
+		{name: "relative write resolves against cwd", kind: "write", value: "file", cwd: "/tmp/allowed"},
+		{name: "command allowed", kind: "command", value: "git status"},
+		{name: "command denied by deny rule", kind: "command", value: "git push origin main", wantErr: true},
+		{name: "url allowed by allowedDomains", kind: "url", value: "https://example.com/path"},
+		{name: "url denied by deniedDomains", kind: "url", value: "https://evil.example.com/", wantErr: true},
+		{name: "url not in allowedDomains", kind: "url", value: "https://other.test/", wantErr: true},
+		{name: "unknown kind", kind: "bogus", value: "x", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cwd := tt.cwd
+			if cwd == "" {
+				cwd = "/"
+			}
+			err := checkPolicy(cfg, tt.kind, tt.value, cwd)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("checkPolicy(%q, %q) error = %v, wantErr %v", tt.kind, tt.value, err, tt.wantErr)
+			}
+		})
 	}
 }

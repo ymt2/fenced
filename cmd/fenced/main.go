@@ -27,6 +27,12 @@ func main() {
 		log.Fatal("sandboxing not supported on this platform")
 	}
 
+	// `check` is claimed as the first argument; use `fenced -- check ...`
+	// to sandbox a command literally named check.
+	if len(os.Args) > 1 && os.Args[1] == "check" {
+		os.Exit(runCheck(os.Args[2:], os.Stdout, os.Stderr))
+	}
+
 	preArgs, cmdArgs := splitDoubleDash(os.Args[1:])
 
 	fs := flag.NewFlagSet("fenced", flag.ExitOnError)
@@ -36,6 +42,7 @@ func main() {
 	}
 	if len(cmdArgs) == 0 {
 		fmt.Fprintln(os.Stderr, "usage: fenced [--fence-verbose] -- <command> [args...]")
+		fmt.Fprintln(os.Stderr, "       fenced check <read|write|command|url> <value...>")
 		os.Exit(2)
 	}
 
@@ -111,6 +118,81 @@ func splitDoubleDash(args []string) (pre, cmd []string) {
 		}
 	}
 	return nil, args
+}
+
+const checkUsage = `usage: fenced check read <path>
+       fenced check write <path>
+       fenced check command <command> [args...]
+       fenced check url <url>`
+
+// runCheck implements `fenced check`: it evaluates a path, command, or URL
+// against the same resolved config run mode enforces, without sandboxing or
+// executing anything. Exit codes: 0 allowed, 1 denied, 2 usage/config error.
+func runCheck(args []string, stdout, stderr io.Writer) int {
+	kind, value, err := parseCheckArgs(args)
+	if err != nil {
+		fmt.Fprintf(stderr, "fenced: %v\n%s\n", err, checkUsage)
+		return 2
+	}
+
+	cfg, err := fence.LoadConfigResolved(fence.ResolveDefaultConfigPath())
+	if err != nil {
+		fmt.Fprintf(stderr, "fenced: %v\n", err)
+		return 2
+	}
+	if cfg == nil {
+		cfg = fence.DefaultConfig()
+	}
+
+	// Best effort: without a cwd the path checks still work for absolute paths.
+	cwd, _ := os.Getwd()
+
+	if err := checkPolicy(cfg, kind, value, cwd); err != nil {
+		fmt.Fprintf(stderr, "denied: %v\n", err)
+		return 1
+	}
+	fmt.Fprintln(stdout, "allowed")
+	return 0
+}
+
+// parseCheckArgs validates `fenced check` arguments and normalizes them to a
+// (kind, value) pair. Command args are shell-joined so both
+// `check command "git push"` and `check command git push` work.
+func parseCheckArgs(args []string) (kind, value string, err error) {
+	if len(args) < 2 {
+		return "", "", fmt.Errorf("check needs a kind and a value")
+	}
+	kind = args[0]
+	switch kind {
+	case "read", "write", "url":
+		if len(args) != 2 {
+			return "", "", fmt.Errorf("check %s takes exactly one value", kind)
+		}
+		value = args[1]
+	case "command":
+		value = shellquote.Join(args[1:]...)
+	default:
+		return "", "", fmt.Errorf("unknown check kind %q (want read, write, command, or url)", kind)
+	}
+	return kind, value, nil
+}
+
+// checkPolicy dispatches to the fence policy preflight for kind. These
+// evaluate the declared value against the config only; nothing is sandboxed
+// and the kernel-level sandbox remains authoritative.
+func checkPolicy(cfg *fence.Config, kind, value, cwd string) error {
+	switch kind {
+	case "read":
+		return fence.CheckReadPath(cfg, value, cwd)
+	case "write":
+		return fence.CheckWritePath(cfg, value, cwd)
+	case "command":
+		return fence.CheckCommand(cfg, value)
+	case "url":
+		return fence.CheckURL(cfg, value)
+	default:
+		return fmt.Errorf("unknown check kind %q", kind)
+	}
 }
 
 func dynamicSockets() []string {
