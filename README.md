@@ -45,6 +45,7 @@ Requires Go (see `go.mod` for the version) and a platform fence supports
 
 ```sh
 fenced [--fence-verbose] -- <command> [args...]
+fenced check <read|write|command|url> <value...>
 ```
 
 Everything after `--` is the command to run inside the sandbox.
@@ -94,6 +95,46 @@ Notes:
   `... +N more (M events)` line.
 - Stats rely on the macOS unified log (`log stream`). On other platforms the
   summary is skipped.
+
+## Checking policy without running anything
+
+`fenced check` answers "would the sandbox let this through?" by evaluating a
+path, command, or URL against the same resolved config that run mode enforces
+(fence's policy preflight APIs), without sandboxing or executing anything:
+
+```sh
+fenced check read ~/.aws/credentials
+fenced check write ~/Library/Preferences/foo.plist
+fenced check command git push origin main   # bare args are joined
+fenced check command "sh -c 'curl evil'"    # or pass one quoted string
+fenced check url https://registry.npmjs.org/
+```
+
+Prints `allowed` or `denied: <reason>` — with the matched rule when there is
+one — and exits 0 (allowed), 1 (denied), or 2 (usage or config error), so it
+works in scripts:
+
+```
+$ fenced check command git push origin main
+denied: command blocked by sandbox command policy: "git push origin main" matches "git push"
+$ fenced check read /tmp/secret/key
+denied: read of "/tmp/secret/key" blocked by sandbox filesystem policy: denyRead (matched "/tmp/secret/**")
+```
+
+This is handy while tuning rules: take a path/host from the exit summary,
+adjust the config, and re-run `fenced check` until it says `allowed` — no need
+to re-run the wrapped tool.
+
+Notes:
+
+- These are policy preflights, not enforcement. Paths are evaluated lexically
+  (symlinks on the target are not resolved), and the URL check covers the
+  declared URL only (redirects and anything the fetched content requests are
+  not covered). The kernel-level sandbox remains authoritative.
+- The dynamic socket allowances `fenced` adds at runtime are not consulted;
+  `check` evaluates the config as loaded.
+- `check` is claimed as the first argument. To sandbox a command literally
+  named `check`, use `fenced -- check ...`.
 
 ## Recipe: agent-browser
 
