@@ -6,6 +6,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/fencesandbox/fence v0.1.61 h1:0C4peuy1xtmyf/kf/2wl35FMj6lw2yxys28JENHsaOk=
 github.com/fencesandbox/fence v0.1.61/go.mod h1:jQo7tiIvdgklEejv87D9yWjttED9YQoMBTOCk2SZ1mA=
+github.com/fencesandbox/fence v0.1.62 h1:LSktc1A1g4FtR125Erhwdy0OHwYb7SQrzTBSpeoTOQk=
+github.com/fencesandbox/fence v0.1.62/go.mod h1:jQo7tiIvdgklEejv87D9yWjttED9YQoMBTOCk2SZ1mA=
 github.com/go-quicktest/qt v1.102.0 h1:HSQxCeh5YZH3EL3W39ixjtyaEhcWSXQHtHnMBzSs474=
 github.com/go-quicktest/qt v1.102.0/go.mod h1:p4lGIVX+8Wa6ZPNDvqcxq36XpUDLh42FLetFU7odllI=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
