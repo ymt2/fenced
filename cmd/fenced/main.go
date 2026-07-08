@@ -61,13 +61,21 @@ func main() {
 		dynamicSockets()...,
 	)
 
+	command := shellquote.Join(cmdArgs...)
+
+	// Preflight the command policy before NewManager so a denied command
+	// fails immediately, without starting proxies or generating profiles.
+	if err := fence.CheckCommand(cfg, command); err != nil {
+		log.Fatal(err)
+	}
+
 	manager := fence.NewManager(cfg, false, true)
 	defer manager.Cleanup()
 	if err := manager.Initialize(); err != nil {
 		log.Fatal(err)
 	}
 
-	wrapped, err := manager.WrapCommand(shellquote.Join(cmdArgs...))
+	wrapped, err := manager.WrapCommand(command)
 	if err != nil {
 		log.Fatal(err)
 	}
