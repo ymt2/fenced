@@ -8,6 +8,8 @@ github.com/fencesandbox/fence v0.1.61 h1:0C4peuy1xtmyf/kf/2wl35FMj6lw2yxys28JENH
 github.com/fencesandbox/fence v0.1.61/go.mod h1:jQo7tiIvdgklEejv87D9yWjttED9YQoMBTOCk2SZ1mA=
 github.com/fencesandbox/fence v0.1.62 h1:LSktc1A1g4FtR125Erhwdy0OHwYb7SQrzTBSpeoTOQk=
 github.com/fencesandbox/fence v0.1.62/go.mod h1:jQo7tiIvdgklEejv87D9yWjttED9YQoMBTOCk2SZ1mA=
+github.com/fencesandbox/fence v0.1.63 h1:3Jw5bEy6KxVxjdn11fRsTIiF+BQ9eHRTT2v3WCg6V1M=
+github.com/fencesandbox/fence v0.1.63/go.mod h1:vJBMV56v9lbY8uNVRLwmNutTdESqrkqJGafNwU1lJGM=
 github.com/go-quicktest/qt v1.102.0 h1:HSQxCeh5YZH3EL3W39ixjtyaEhcWSXQHtHnMBzSs474=
 github.com/go-quicktest/qt v1.102.0/go.mod h1:p4lGIVX+8Wa6ZPNDvqcxq36XpUDLh42FLetFU7odllI=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
@@ -36,6 +38,8 @@ golang.org/x/sync v0.20.0 h1:e0PTpb7pjO8GAtTs2dQ6jYa5BWYlMuX047Dco/pItO4=
 golang.org/x/sync v0.20.0/go.mod h1:9xrNwdLfx4jkKbNva9FpL6vEN7evnE43NNNJQ2LF3+0=
 golang.org/x/sys v0.46.0 h1:noSf2Fq6F8DBgS+LysIkx7rIExoNHJsxOAtPp4rthXw=
 golang.org/x/sys v0.46.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
+golang.org/x/sys v0.47.0 h1:o7XGOvZQCADBQQ4Y7VNq2dRWQR7JmOUW8Kxx4ZsNgWs=
+golang.org/x/sys v0.47.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
 golang.org/x/term v0.44.0 h1:0rLvDRCtNj0gZkyIXhCyOb2OAzEhLVqc4B+hrsBhrmc=
 golang.org/x/term v0.44.0/go.mod h1:7ze4MdzUzLXpSAoFP1H0bOI9aXDqveSvatT5vKcFh2Y=
 golang.org/x/tools v0.44.0 h1:UP4ajHPIcuMjT1GqzDWRlalUEoY+uzoZKnhOjbIPD2c=
