@@ -474,7 +474,6 @@ func TestLoadConfig(t *testing.T) {
 		}
 
 		cfg, err := loadConfig(child)
-
 		if err != nil {
 			t.Fatal(err)
 		}
