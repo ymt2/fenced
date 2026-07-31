@@ -519,6 +519,8 @@ func TestRunCheckSettingsFlag(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			var stdout, stderr bytes.Buffer
 			if got := runCheck(tt.args, &stdout, &stderr); got != tt.want {
 				t.Errorf("runCheck(%v) = %d, want %d (stderr: %s)", tt.args, got, tt.want, stderr.String())
