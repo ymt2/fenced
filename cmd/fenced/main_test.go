@@ -460,3 +460,74 @@ func TestCheckPolicy(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadConfig(t *testing.T) {
+	t.Run("explicit settings path loads that file and resolves extends", func(t *testing.T) {
+		dir := t.TempDir()
+		base := filepath.Join(dir, "base.json")
+		if err := os.WriteFile(base, []byte(`{"network": {"allowedDomains": ["base.test"]}}`), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		child := filepath.Join(dir, "worker.json")
+		if err := os.WriteFile(child, []byte(`{"extends": "./base.json", "network": {"allowedDomains": ["worker.test"]}}`), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := loadConfig(child)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, want := range []string{"base.test", "worker.test"} {
+			if !slices.Contains(cfg.Network.AllowedDomains, want) {
+				t.Errorf("AllowedDomains = %v, want it to contain %q", cfg.Network.AllowedDomains, want)
+			}
+		}
+	})
+
+	t.Run("missing explicit settings path fails instead of falling back to defaults", func(t *testing.T) {
+		_, err := loadConfig(filepath.Join(t.TempDir(), "no-such.json"))
+
+		if err == nil {
+			t.Error("loadConfig() error = nil, want failure for missing explicit settings file")
+		}
+	})
+}
+
+func TestRunCheckSettingsFlag(t *testing.T) {
+	dir := t.TempDir()
+	settings := filepath.Join(dir, "test.json")
+	if err := os.WriteFile(settings, []byte(`{"network": {"allowedDomains": ["allowed.test"]}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name string
+		args []string
+		want int
+	}{
+		{
+			name: "url in allowedDomains of the given settings is allowed",
+			args: []string{"--settings", settings, "url", "https://allowed.test"},
+			want: 0,
+		},
+		{
+			name: "url outside allowedDomains of the given settings is denied",
+			args: []string{"--settings", settings, "url", "https://other.test"},
+			want: 1,
+		},
+		{
+			name: "missing settings file is a config error",
+			args: []string{"--settings", filepath.Join(dir, "no-such.json"), "url", "https://allowed.test"},
+			want: 2,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			if got := runCheck(tt.args, &stdout, &stderr); got != tt.want {
+				t.Errorf("runCheck(%v) = %d, want %d (stderr: %s)", tt.args, got, tt.want, stderr.String())
+			}
+		})
+	}
+}
