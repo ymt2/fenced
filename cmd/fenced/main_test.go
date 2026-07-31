@@ -500,29 +500,25 @@ func TestRunCheckSettingsFlag(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tests := []struct {
-		name string
+	tests := map[string]struct {
 		args []string
 		want int
 	}{
-		{
-			name: "url in allowedDomains of the given settings is allowed",
+		"url in allowedDomains of the given settings is allowed": {
 			args: []string{"--settings", settings, "url", "https://allowed.test"},
 			want: 0,
 		},
-		{
-			name: "url outside allowedDomains of the given settings is denied",
+		"url outside allowedDomains of the given settings is denied": {
 			args: []string{"--settings", settings, "url", "https://other.test"},
 			want: 1,
 		},
-		{
-			name: "missing settings file is a config error",
+		"missing settings file is a config error": {
 			args: []string{"--settings", filepath.Join(dir, "no-such.json"), "url", "https://allowed.test"},
 			want: 2,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			var stdout, stderr bytes.Buffer
 			if got := runCheck(tt.args, &stdout, &stderr); got != tt.want {
 				t.Errorf("runCheck(%v) = %d, want %d (stderr: %s)", tt.args, got, tt.want, stderr.String())
