@@ -37,12 +37,13 @@ func main() {
 
 	fs := flag.NewFlagSet("fenced", flag.ExitOnError)
 	verbose := fs.Bool("fence-verbose", false, "forward fence library noise to stderr instead of discarding it")
+	settings := fs.String("settings", "", "path to fence settings file (default: the user config path)")
 	if err := fs.Parse(preArgs); err != nil {
 		log.Fatal(err)
 	}
 	if len(cmdArgs) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: fenced [--fence-verbose] -- <command> [args...]")
-		fmt.Fprintln(os.Stderr, "       fenced check <read|write|command|url> <value...>")
+		fmt.Fprintln(os.Stderr, "usage: fenced [--fence-verbose] [--settings <file>] -- <command> [args...]")
+		fmt.Fprintln(os.Stderr, "       fenced check [--settings <file>] <read|write|command|url> <value...>")
 		os.Exit(2)
 	}
 
@@ -54,12 +55,9 @@ func main() {
 	// at /dev/null so their noise does not land on the child's stderr.
 	os.Setenv("FENCE_LOG_FILE", os.DevNull)
 
-	cfg, err := fence.LoadConfigResolved(fence.ResolveDefaultConfigPath())
+	cfg, err := loadConfig(*settings)
 	if err != nil {
 		log.Fatal(err)
-	}
-	if cfg == nil {
-		cfg = fence.DefaultConfig()
 	}
 
 	// Resolve sockets dynamically and append them.
@@ -120,28 +118,58 @@ func splitDoubleDash(args []string) (pre, cmd []string) {
 	return nil, args
 }
 
-const checkUsage = `usage: fenced check read <path>
-       fenced check write <path>
-       fenced check command <command> [args...]
-       fenced check url <url>`
+const checkUsage = `usage: fenced check [--settings <file>] read <path>
+       fenced check [--settings <file>] write <path>
+       fenced check [--settings <file>] command <command> [args...]
+       fenced check [--settings <file>] url <url>`
+
+// loadConfig loads the resolved fence config from settingsPath, falling back
+// to the default user config path when settingsPath is empty.
+func loadConfig(settingsPath string) (*fence.Config, error) {
+	path := settingsPath
+	if path == "" {
+		path = fence.ResolveDefaultConfigPath()
+	}
+	cfg, err := fence.LoadConfigResolved(path)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		// Load treats a missing or empty file as (nil, nil). That is fine for
+		// the default path, but an explicit --settings typo must not silently
+		// fall back to the default config.
+		if settingsPath != "" {
+			return nil, fmt.Errorf("settings file not found or empty: %s", settingsPath)
+		}
+		cfg = fence.DefaultConfig()
+	}
+	return cfg, nil
+}
 
 // runCheck implements `fenced check`: it evaluates a path, command, or URL
 // against the same resolved config run mode enforces, without sandboxing or
 // executing anything. Exit codes: 0 allowed, 1 denied, 2 usage/config error.
 func runCheck(args []string, stdout, stderr io.Writer) int {
-	kind, value, err := parseCheckArgs(args)
+	// Flags must precede the kind; flag parsing stops at the first non-flag
+	// argument, so values like `check command ls -la` stay untouched.
+	fs := flag.NewFlagSet("fenced check", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	settings := fs.String("settings", "", "path to fence settings file (default: the user config path)")
+	if err := fs.Parse(args); err != nil {
+		fmt.Fprintf(stderr, "fenced: %v\n%s\n", err, checkUsage)
+		return 2
+	}
+
+	kind, value, err := parseCheckArgs(fs.Args())
 	if err != nil {
 		fmt.Fprintf(stderr, "fenced: %v\n%s\n", err, checkUsage)
 		return 2
 	}
 
-	cfg, err := fence.LoadConfigResolved(fence.ResolveDefaultConfigPath())
+	cfg, err := loadConfig(*settings)
 	if err != nil {
 		fmt.Fprintf(stderr, "fenced: %v\n", err)
 		return 2
-	}
-	if cfg == nil {
-		cfg = fence.DefaultConfig()
 	}
 
 	// Best effort: without a cwd the path checks still work for absolute paths.
