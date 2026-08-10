@@ -14,6 +14,8 @@ github.com/fencesandbox/fence v0.1.64 h1:Hj4etoL2ecbPBnogQzBN63A5gOLR/jhJqbW5x6v
 github.com/fencesandbox/fence v0.1.64/go.mod h1:1PLQEjlouViUhyc21fbOVtzHKOJAH93ZXRtUeY46nAQ=
 github.com/fencesandbox/fence v0.1.65 h1:F08Nm7U8LRZ8QAPNeAmqoEENDs88o22R477dzYpcUCQ=
 github.com/fencesandbox/fence v0.1.65/go.mod h1:1PLQEjlouViUhyc21fbOVtzHKOJAH93ZXRtUeY46nAQ=
+github.com/fencesandbox/fence v0.1.66 h1:8+life7Z5GL15Xzver06hGwD36Pc2rvYHMWh69Z+Gf0=
+github.com/fencesandbox/fence v0.1.66/go.mod h1:1PLQEjlouViUhyc21fbOVtzHKOJAH93ZXRtUeY46nAQ=
 github.com/go-quicktest/qt v1.102.0 h1:HSQxCeh5YZH3EL3W39ixjtyaEhcWSXQHtHnMBzSs474=
 github.com/go-quicktest/qt v1.102.0/go.mod h1:p4lGIVX+8Wa6ZPNDvqcxq36XpUDLh42FLetFU7odllI=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
