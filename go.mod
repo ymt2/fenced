@@ -3,13 +3,13 @@ module github.com/ymt2/fenced
 go 1.26.2
 
 require (
-	github.com/fencesandbox/fence v0.1.66
+	github.com/fencesandbox/fence v0.1.67
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 )
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.10.0 // indirect
-	github.com/things-go/go-socks5 v0.1.1 // indirect
+	github.com/things-go/go-socks5 v0.1.3 // indirect
 	github.com/tidwall/jsonc v0.3.3 // indirect
 	golang.org/x/mod v0.38.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
